@@ -1,6 +1,5 @@
-# Large data file — place locally in output/ before running the dashboard
+# Raw CSV is too large for GitHub; the gzipped copy in output/ is committed
 output/combined_data.csv
-output/combined_data.csv.gz
 
 # Python
 __pycache__/

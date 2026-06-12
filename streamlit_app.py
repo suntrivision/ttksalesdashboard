@@ -118,16 +118,17 @@ def _load_from_local() -> pd.DataFrame:
 #  Data loading ─
 @st.cache_data(show_spinner="Loading sales data…")
 def load_data() -> pd.DataFrame:
-    df = _load_from_supabase()
-    if df is None:
-        if not DATA_PATH.is_file() and not DATA_PATH.with_suffix(DATA_PATH.suffix + ".gz").is_file():
+    gz_path = DATA_PATH.with_suffix(DATA_PATH.suffix + ".gz")
+    if DATA_PATH.is_file() or gz_path.is_file():
+        df = _load_from_local()
+    else:
+        df = _load_from_supabase()
+        if df is None:
             st.error(
-                "No data source configured. Add Supabase secrets "
-                "(SUPABASE_URL, SUPABASE_ANON_KEY) in Streamlit Cloud app settings, "
-                "or place combined_data.csv in output/ for local development."
+                "No data source found. Add output/combined_data.csv.gz to the repo, "
+                "configure Supabase secrets, or place combined_data.csv locally."
             )
             st.stop()
-        df = _load_from_local()
     df["net_amount"] = pd.to_numeric(df["net_amount"], errors="coerce").fillna(0)
     df["quantity"]   = pd.to_numeric(df["quantity"],   errors="coerce").fillna(0)
     df.dropna(subset=["date"], inplace=True)
