@@ -1,7 +1,12 @@
+import gzip
+import io
 import os
-import pandas as pd
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
 import streamlit as st
+from dotenv import load_dotenv
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -51,23 +56,58 @@ NEUTRAL_COLOR = "#90CAF9"
 REGION_PALETTE = px.colors.qualitative.Set2
 CATEGORY_PALETTE = px.colors.qualitative.Pastel
 
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
 DATA_PATH = os.path.join(os.path.dirname(__file__), "combined_data.csv")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_BUCKET = os.getenv("SUPABASE_STORAGE_BUCKET", "sales-data")
+SUPABASE_DATA_FILE = os.getenv("SUPABASE_DATA_FILE", "combined_data.csv.gz")
+
+SALES_COLUMNS = [
+    "date", "year", "month", "customer_id", "customer_name",
+    "quantity", "net_amount", "distributor", "region", "area",
+    "brand_group", "brand", "sub_brand", "category", "sub_category",
+    "l_1_channel", "l_2_channel", "chain",
+]
+
+
+def _read_sales_csv(source: io.BytesIO | str) -> pd.DataFrame:
+    return pd.read_csv(
+        source,
+        usecols=SALES_COLUMNS,
+        parse_dates=["date"],
+        low_memory=False,
+    )
+
+
+def _load_from_supabase() -> pd.DataFrame | None:
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return None
+
+    from supabase import create_client
+
+    client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    raw = client.storage.from_(SUPABASE_BUCKET).download(SUPABASE_DATA_FILE)
+    if SUPABASE_DATA_FILE.endswith(".gz"):
+        raw = gzip.decompress(raw)
+    return _read_sales_csv(io.BytesIO(raw))
+
+
+def _load_from_local() -> pd.DataFrame:
+    gz_path = DATA_PATH + ".gz"
+    if os.path.isfile(gz_path):
+        with gzip.open(gz_path, "rb") as gz:
+            return _read_sales_csv(gz)
+    return _read_sales_csv(DATA_PATH)
+
 
 #  Data loading ─
 @st.cache_data(show_spinner="Loading sales data…")
 def load_data() -> pd.DataFrame:
-    usecols = [
-        "date", "year", "month", "customer_id", "customer_name",
-        "quantity", "net_amount", "distributor", "region", "area",
-        "brand_group", "brand", "sub_brand", "category", "sub_category",
-        "l_1_channel", "l_2_channel", "chain",
-    ]
-    df = pd.read_csv(
-        DATA_PATH,
-        usecols=usecols,
-        parse_dates=["date"],
-        low_memory=False,
-    )
+    df = _load_from_supabase()
+    if df is None:
+        df = _load_from_local()
     df["net_amount"] = pd.to_numeric(df["net_amount"], errors="coerce").fillna(0)
     df["quantity"]   = pd.to_numeric(df["quantity"],   errors="coerce").fillna(0)
     df.dropna(subset=["date"], inplace=True)

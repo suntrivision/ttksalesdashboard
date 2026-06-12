@@ -1,5 +1,6 @@
 # Large data file — place locally in output/ before running the dashboard
 output/combined_data.csv
+output/combined_data.csv.gz
 
 # Python
 __pycache__/
