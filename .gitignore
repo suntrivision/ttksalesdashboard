@@ -6,6 +6,7 @@ output/combined_data.csv.gz
 __pycache__/
 *.py[cod]
 .env
+.streamlit/secrets.toml
 .venv/
 venv/
 
