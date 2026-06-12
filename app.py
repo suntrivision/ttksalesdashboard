@@ -2,7 +2,7 @@
 
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 app = FastAPI(title="TTK Sales Dashboard")
@@ -37,8 +37,8 @@ SETUP_HTML = """<!DOCTYPE html>
 </html>"""
 
 
-@app.get("/")
-def home() -> RedirectResponse | HTMLResponse:
+@app.get("/", response_model=None)
+def home() -> Response:
     if STREAMLIT_APP_URL:
         return RedirectResponse(url=STREAMLIT_APP_URL, status_code=307)
     return HTMLResponse(SETUP_HTML)
