@@ -1,0 +1,13 @@
+# Large data file — place locally in output/ before running the dashboard
+output/combined_data.csv
+
+# Python
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
